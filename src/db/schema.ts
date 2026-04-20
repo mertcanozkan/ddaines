@@ -5,7 +5,6 @@ import {
   text,
   boolean,
   integer,
-  bigint,
   timestamp,
   jsonb,
   primaryKey,
@@ -17,6 +16,7 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }),
   email: varchar("email", { length: 255 }).unique().notNull(),
   emailVerified: timestamp("email_verified", { withTimezone: true }),
+  image: text("image"),
   username: varchar("username", { length: 100 }).unique(),
   passwordHash: varchar("password_hash", { length: 255 }),
   avatarUrl: text("avatar_url"),
@@ -30,25 +30,24 @@ export const users = pgTable("users", {
 });
 
 export const accounts = pgTable("accounts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
+  userId: uuid("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 100 }).notNull(),
   provider: varchar("provider", { length: 100 }).notNull(),
-  providerAccountId: varchar("provider_account_id", { length: 255 }).notNull(),
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  expiresAt: bigint("expires_at", { mode: "number" }),
-  tokenType: varchar("token_type", { length: 100 }),
+  providerAccountId: varchar("providerAccountId", { length: 255 }).notNull(),
+  refresh_token: text("refresh_token"),
+  access_token: text("access_token"),
+  expires_at: integer("expires_at"),
+  token_type: varchar("token_type", { length: 100 }),
   scope: text("scope"),
-  idToken: text("id_token"),
-  sessionState: text("session_state"),
+  id_token: text("id_token"),
+  session_state: text("session_state"),
 });
 
 export const sessions = pgTable("sessions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  sessionToken: varchar("session_token", { length: 255 }).unique().notNull(),
-  userId: uuid("user_id")
+  sessionToken: varchar("sessionToken", { length: 255 }).primaryKey(),
+  userId: uuid("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   expires: timestamp("expires", { withTimezone: true }).notNull(),

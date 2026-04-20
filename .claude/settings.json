@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/mertozkan/Dev/webdev/projects/dsapp/**)",
+      "Bash(node -e \"const p = require\\('/Users/mertozkan/Dev/webdev/projects/dsapp/daines-gallery/node_modules/tailwindcss/package.json'\\); console.log\\(JSON.stringify\\(p.exports, null, 2\\)\\)\")",
+      "Bash(node -e \"console.log\\(process.cwd\\(\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const p = require\\('/Users/mertozkan/Dev/webdev/projects/dsapp/daines-gallery/node_modules/shadcn/package.json'\\); console.log\\(JSON.stringify\\(p.exports?.['./tailwind.css'] || p.exports, null, 2\\)\\)\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+    ]
+  }
+}

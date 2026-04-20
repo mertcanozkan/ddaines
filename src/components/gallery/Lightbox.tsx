@@ -101,11 +101,11 @@ export function Lightbox({ photo, photos, onClose, onNavigate }: LightboxProps) 
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.3 }}
-            className="relative z-10 flex flex-col lg:flex-row gap-4 max-w-6xl w-full mx-4 max-h-[90vh]"
+            className="relative z-10 flex flex-col lg:flex-row gap-4 max-w-6xl w-full mx-16 h-[88vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Image */}
-            <div className="relative flex-1 min-h-[300px] max-h-[80vh] rounded-sm overflow-hidden">
+            <div className="relative flex-1 min-h-0 rounded-sm overflow-hidden">
               <motion.div layoutId={`photo-img-${photo.id}`} className="h-full">
                 <Image
                   src={photo.imageUrl}
@@ -119,7 +119,7 @@ export function Lightbox({ photo, photos, onClose, onNavigate }: LightboxProps) 
             </div>
 
             {/* Metadata panel */}
-            <div className="lg:w-72 flex flex-col gap-4 bg-card/80 backdrop-blur-sm rounded-sm p-5 border border-border">
+            <div className="lg:w-72 flex flex-col gap-4 bg-card/80 backdrop-blur-sm rounded-sm p-5 border border-border overflow-y-auto">
               {photo.title && (
                 <h2 className="font-display text-xl font-semibold italic">{photo.title}</h2>
               )}

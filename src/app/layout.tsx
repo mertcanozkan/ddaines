@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, DM_Sans, Geist } from "next/font/google";
+import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
-import { cn } from "@/lib/utils";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -12,7 +11,13 @@ const cormorant = Cormorant_Garamond({
   display: "swap",
 });
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -36,7 +41,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn(cormorant.variable, "font-sans", geist.variable)}
+      className={`${cormorant.variable} ${dmSans.variable}`}
       suppressHydrationWarning
     >
       <body className="antialiased">

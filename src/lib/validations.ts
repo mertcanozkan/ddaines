@@ -48,7 +48,7 @@ export const gallerySchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
   description: z.string().max(2000).optional(),
   category: z.string().optional(),
-  visibility: z.enum(["public", "private"]).default("public"),
+  visibility: z.enum(["public", "private"]),
   coverImageUrl: z.string().url().optional().or(z.literal("")),
 });
 
@@ -73,6 +73,8 @@ export const profileSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type GalleryInput = z.infer<typeof gallerySchema>;
 export type PhotoUploadInput = z.infer<typeof photoUploadSchema>;
 export type ProfileInput = z.infer<typeof profileSchema>;

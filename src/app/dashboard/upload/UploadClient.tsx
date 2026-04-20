@@ -18,10 +18,48 @@ interface FileState {
   title: string;
   description: string;
   tags: string;
+  errorMsg?: string;
 }
 
 interface Props {
   galleries: { id: string; title: string }[];
+}
+
+async function compressImage(file: File, maxBytes = 9 * 1024 * 1024): Promise<File> {
+  if (file.size <= maxBytes) return file;
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    const url = URL.createObjectURL(file);
+    el.onload = () => { URL.revokeObjectURL(url); resolve(el); };
+    el.onerror = reject;
+    el.src = url;
+  });
+
+  const canvas = document.createElement("canvas");
+  let { width, height } = img;
+  let quality = 0.85;
+  let blob: Blob = file;
+
+  do {
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+    blob = await new Promise<Blob>((res) =>
+      canvas.toBlob((b) => res(b!), "image/jpeg", quality)
+    );
+    if (blob.size > maxBytes) {
+      if (quality > 0.5) {
+        quality -= 0.15;
+      } else {
+        width = Math.floor(width * 0.75);
+        height = Math.floor(height * 0.75);
+        quality = 0.85;
+      }
+    }
+  } while (blob.size > maxBytes);
+
+  return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
 }
 
 export function UploadClient({ galleries }: Props) {
@@ -68,12 +106,14 @@ export function UploadClient({ galleries }: Props) {
     updateFile(index, { status: "uploading", progress: 10 });
 
     const sigRes = await fetch("/api/upload");
+    if (!sigRes.ok) throw new Error("Failed to get upload signature");
     const { signature, timestamp, cloudName, apiKey, folder } = await sigRes.json();
 
+    const fileToUpload = await compressImage(item.file);
     const form = new FormData();
-    form.append("file", item.file);
+    form.append("file", fileToUpload);
     form.append("signature", signature);
-    form.append("timestamp", timestamp);
+    form.append("timestamp", String(timestamp));
     form.append("api_key", apiKey);
     form.append("folder", folder);
 
@@ -84,10 +124,13 @@ export function UploadClient({ galleries }: Props) {
       { method: "POST", body: form }
     );
     const cloudData = await cloudRes.json();
+    if (!cloudRes.ok || cloudData.error) {
+      throw new Error(cloudData.error?.message ?? "Cloudinary upload failed");
+    }
 
     updateFile(index, { progress: 70 });
 
-    await fetch("/api/photos", {
+    const photoRes = await fetch("/api/photos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -99,10 +142,14 @@ export function UploadClient({ galleries }: Props) {
         cloudinaryPublicId: cloudData.public_id,
         width: cloudData.width,
         height: cloudData.height,
-        fileSize: item.file.size,
+        fileSize: fileToUpload.size,
         tags: item.tags,
       }),
     });
+    if (!photoRes.ok) {
+      const err = await photoRes.json().catch(() => ({}));
+      throw new Error(err.error ?? "Failed to save photo");
+    }
 
     updateFile(index, { status: "done", progress: 100 });
   }
@@ -115,8 +162,8 @@ export function UploadClient({ galleries }: Props) {
       if (files[i].status === "idle") {
         try {
           await uploadFile(files[i], i);
-        } catch {
-          updateFile(i, { status: "error" });
+        } catch (err) {
+          updateFile(i, { status: "error", errorMsg: err instanceof Error ? err.message : "Upload failed" });
         }
       }
     }
@@ -225,6 +272,9 @@ export function UploadClient({ galleries }: Props) {
                     style={{ width: `${item.progress}%` }}
                   />
                 </div>
+              )}
+              {item.status === "error" && item.errorMsg && (
+                <p className="text-xs text-destructive">{item.errorMsg}</p>
               )}
             </div>
 

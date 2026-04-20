@@ -134,6 +134,12 @@ export function GalleriesClient({ galleries: initial, userId }: Props) {
                 )}
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                   <Link
+                    href={`/dashboard/galleries/${gallery.id}`}
+                    className="flex-1 text-center text-xs py-1.5 rounded-sm bg-gold/10 text-gold hover:bg-gold/20 transition-colors font-medium"
+                  >
+                    Manage
+                  </Link>
+                  <Link
                     href={`/gallery/${gallery.slug}`}
                     className="flex-1 text-center text-xs py-1.5 rounded-sm bg-muted hover:bg-muted/80 transition-colors"
                   >

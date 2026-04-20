@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
-import { galleries } from "@/db/schema";
+import { photos } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { deleteImage } from "@/lib/cloudinary";
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const body = await request.json();
-  const { title, description, category, visibility, coverImageUrl } = body;
+  const { title, description, tags } = await request.json();
 
-  if (!title) return NextResponse.json({ error: "Title is required" }, { status: 400 });
-
-  const conditions = [eq(galleries.id, id)];
-  if (session.user.role !== "admin") conditions.push(eq(galleries.userId, session.user.id));
+  const conditions = [eq(photos.id, id)];
+  if (session.user.role !== "admin") conditions.push(eq(photos.userId, session.user.id));
 
   const [updated] = await db
-    .update(galleries)
-    .set({ title, description, category, visibility, coverImageUrl, updatedAt: new Date() })
+    .update(photos)
+    .set({
+      title,
+      description,
+      tags: tags ? tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
+    })
     .where(and(...conditions))
     .returning();
 
@@ -33,9 +35,16 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
   const { id } = await params;
 
-  const conditions = [eq(galleries.id, id)];
-  if (session.user.role !== "admin") conditions.push(eq(galleries.userId, session.user.id));
+  const conditions = [eq(photos.id, id)];
+  if (session.user.role !== "admin") conditions.push(eq(photos.userId, session.user.id));
 
-  await db.delete(galleries).where(and(...conditions));
+  const [photo] = await db.select().from(photos).where(and(...conditions)).limit(1);
+  if (!photo) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (photo.cloudinaryPublicId) {
+    await deleteImage(photo.cloudinaryPublicId).catch(() => {});
+  }
+
+  await db.delete(photos).where(eq(photos.id, id));
   return NextResponse.json({ success: true });
 }
