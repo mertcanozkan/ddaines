@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -13,6 +13,14 @@ import { Label } from "@/components/ui/label";
 import { loginSchema, type LoginInput } from "@/lib/validations";
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
@@ -107,6 +115,7 @@ export default function LoginPage() {
               type="email"
               placeholder="you@example.com"
               className="bg-muted/30"
+              suppressHydrationWarning
               {...register("email")}
             />
             {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
@@ -125,6 +134,7 @@ export default function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 className="bg-muted/30 pr-10"
+                suppressHydrationWarning
                 {...register("password")}
               />
               <button

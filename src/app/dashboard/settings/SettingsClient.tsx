@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Camera } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,8 +22,12 @@ interface Props {
 
 export function SettingsClient({ user }: Props) {
   const router = useRouter();
+  const { update } = useSession();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? undefined);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ProfileInput>({
     resolver: zodResolver(profileSchema),
@@ -36,6 +41,44 @@ export function SettingsClient({ user }: Props) {
   });
 
   const initials = user.name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "?";
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+
+    const sigRes = await fetch("/api/upload");
+    if (!sigRes.ok) { setAvatarUploading(false); return; }
+    const { signature, timestamp, cloudName, apiKey, folder } = await sigRes.json();
+
+    const form = new FormData();
+    form.append("file", file);
+    form.append("signature", signature);
+    form.append("timestamp", String(timestamp));
+    form.append("api_key", apiKey);
+    form.append("folder", folder);
+
+    const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: "POST",
+      body: form,
+    });
+    const cloudData = await cloudRes.json();
+    if (!cloudRes.ok || cloudData.error) { setAvatarUploading(false); return; }
+
+    const url: string = cloudData.secure_url.replace("/upload/", "/upload/w_200,h_200,c_fill,f_auto/");
+
+    const res = await fetch("/api/user/avatar", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatarUrl: url }),
+    });
+    if (res.ok) {
+      setAvatarUrl(url);
+      await update({ image: url });
+      router.refresh();
+    }
+    setAvatarUploading(false);
+  }
 
   async function onSubmit(data: ProfileInput) {
     setError(null);
@@ -63,13 +106,35 @@ export function SettingsClient({ user }: Props) {
 
       {/* Avatar section */}
       <div className="flex items-center gap-4 mb-8">
-        <Avatar className="h-16 w-16 ring-2 ring-gold/30">
-          <AvatarImage src={user.avatarUrl ?? undefined} />
-          <AvatarFallback className="text-lg bg-muted">{initials}</AvatarFallback>
-        </Avatar>
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleAvatarChange}
+        />
+        <button
+          type="button"
+          onClick={() => avatarInputRef.current?.click()}
+          disabled={avatarUploading}
+          className="relative group focus:outline-none"
+          title="Change profile photo"
+        >
+          <Avatar className="h-16 w-16 ring-2 ring-gold/30">
+            <AvatarImage src={avatarUrl} />
+            <AvatarFallback className="text-lg bg-muted">{initials}</AvatarFallback>
+          </Avatar>
+          <div className="absolute inset-0 rounded-full flex items-center justify-center bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity">
+            {avatarUploading
+              ? <Loader2 className="h-5 w-5 animate-spin text-gold" />
+              : <Camera className="h-5 w-5 text-gold" />
+            }
+          </div>
+        </button>
         <div>
           <p className="font-medium">{user.name ?? "Your Name"}</p>
           <p className="text-sm text-muted-foreground">@{user.username ?? "username"}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Click photo to change</p>
         </div>
       </div>
 
