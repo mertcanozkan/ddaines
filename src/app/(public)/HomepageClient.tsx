@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Camera } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { GalleryCard, type GalleryItem } from "@/components/gallery/GalleryCard";
 import { useEffect, useRef, useState } from "react";
 
@@ -15,6 +15,7 @@ interface HomepageClientProps {
     coverImageUrl: string | null;
     category: string | null;
     isFeatured: boolean | null;
+    photoCount: number;
     userName: string | null;
     username: string | null;
   }>;
@@ -29,12 +30,12 @@ function CountUp({ target }: { target: number }) {
       ([entry]) => {
         if (entry.isIntersecting) {
           let start = 0;
-          const increment = target / 60;
+          const increment = target / 50;
           const timer = setInterval(() => {
             start += increment;
             if (start >= target) { setCount(target); clearInterval(timer); }
             else setCount(Math.floor(start));
-          }, 16);
+          }, 20);
           observer.disconnect();
         }
       },
@@ -47,14 +48,19 @@ function CountUp({ target }: { target: number }) {
   return <span ref={ref}>{count.toLocaleString()}</span>;
 }
 
-const containerVariants = {
+const stagger = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.15 } },
+  show: { transition: { staggerChildren: 0.1 } },
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 30 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number] } },
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number] } },
+};
+
+const fadeIn = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.8 } },
 };
 
 export function HomepageClient({ stats, featuredGalleries }: HomepageClientProps) {
@@ -67,145 +73,194 @@ export function HomepageClient({ stats, featuredGalleries }: HomepageClientProps
     isFeatured: g.isFeatured,
     visibility: "public",
     user: { name: g.userName, username: g.username },
+    _count: { photos: g.photoCount },
   }));
 
   return (
     <div className="min-h-screen">
-      {/* Hero */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Ambient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-gold/5" />
-        <div className="absolute inset-0 opacity-5"
+
+      {/* ── Hero ─────────────────────────────── */}
+      <section className="relative min-h-screen flex flex-col justify-center px-6 lg:px-10 pt-14 overflow-hidden">
+        {/* Subtle ambient light */}
+        <div
+          className="absolute inset-0 pointer-events-none"
           style={{
-            backgroundImage: "radial-gradient(circle at 25% 50%, var(--gold) 0%, transparent 50%), radial-gradient(circle at 75% 50%, var(--gold) 0%, transparent 50%)",
+            background: "radial-gradient(ellipse 60% 50% at 15% 60%, rgba(208,74,26,0.06) 0%, transparent 70%)",
           }}
         />
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
-            className="mb-6"
-          >
-            <Camera className="h-12 w-12 text-gold mx-auto mb-6" />
-          </motion.div>
+        <div className="max-w-7xl mx-auto w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-12 lg:gap-20 items-end min-h-[80vh] pb-16 pt-24">
 
-          <motion.h1
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
-            className="font-display text-6xl sm:text-8xl lg:text-[10rem] font-light tracking-tight leading-none mb-4"
-          >
-            <span className="block italic text-foreground/90">Capture.</span>
-            <span className="block text-foreground">Curate.</span>
-            <span className="block italic text-gold">Share.</span>
-          </motion.h1>
+            {/* Main type block */}
+            <motion.div variants={stagger} initial="hidden" animate="show">
+              <motion.p variants={fadeIn} className="text-xs font-mono uppercase tracking-[0.3em] text-muted-foreground mb-8 lg:mb-12">
+                Photography / Curated
+              </motion.p>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-lg text-muted-foreground max-w-lg mx-auto mb-10 leading-relaxed"
-          >
-            A premium, cinematic platform for photographers who demand
-            the extraordinary.
-          </motion.p>
+              <div className="overflow-hidden">
+                <motion.h1
+                  variants={stagger}
+                  initial="hidden"
+                  animate="show"
+                  className="font-display font-light leading-[0.9] tracking-tight"
+                >
+                  {["Capture.", "Curate.", "Share."].map((word, i) => (
+                    <motion.span
+                      key={word}
+                      variants={fadeUp}
+                      className="block"
+                      style={{
+                        fontSize: "clamp(4rem, 12vw, 10rem)",
+                        fontStyle: i % 2 === 0 ? "italic" : "normal",
+                        color: i === 2 ? "var(--gold)" : undefined,
+                      }}
+                    >
+                      {word}
+                    </motion.span>
+                  ))}
+                </motion.h1>
+              </div>
+            </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
-          >
-            <Link
-              href="/explore"
-              className="inline-flex items-center gap-2 px-8 py-3 bg-gold text-background font-medium rounded-sm hover:opacity-90 transition-opacity"
+            {/* Right — description + CTAs */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+              className="lg:max-w-[220px] flex flex-col gap-8 lg:pb-4"
             >
-              Explore Gallery <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/auth/register"
-              className="inline-flex items-center gap-2 px-8 py-3 border border-border text-foreground font-medium rounded-sm hover:border-gold hover:text-gold transition-colors"
-            >
-              Start Sharing
-            </Link>
-          </motion.div>
+              <p className="text-sm text-muted-foreground leading-relaxed font-light">
+                A premium cinematic platform for photographers who demand the extraordinary.
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <Link
+                  href="/explore"
+                  className="group inline-flex items-center justify-between gap-4 px-5 py-3 border border-foreground/15 hover:border-gold hover:text-gold transition-all duration-300 text-sm"
+                >
+                  <span className="uppercase tracking-widest text-xs font-mono">Explore</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+                <Link
+                  href="/auth/register"
+                  className="group inline-flex items-center justify-between gap-4 px-5 py-3 bg-gold text-background hover:opacity-90 transition-opacity text-sm"
+                >
+                  <span className="uppercase tracking-widest text-xs font-mono">Join Free</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
-        {/* Scroll indicator */}
+        {/* Scroll line */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1, y: [0, 8, 0] }}
-          transition={{ delay: 1.2, duration: 2, repeat: Infinity }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 w-px h-12 bg-gradient-to-b from-gold/60 to-transparent"
+          initial={{ scaleY: 0, opacity: 0 }}
+          animate={{ scaleY: 1, opacity: 1 }}
+          transition={{ delay: 1.2, duration: 1, ease: "easeOut" }}
+          className="absolute bottom-8 left-10 w-px h-14 bg-gradient-to-b from-gold/50 to-transparent origin-top"
         />
       </section>
 
-      {/* Stats */}
-      <section className="py-16 border-y border-border bg-card">
-        <div className="max-w-7xl mx-auto px-4">
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            className="grid grid-cols-3 gap-8 text-center"
-          >
-            {[
-              { value: stats.photoCount, label: "Photos" },
-              { value: stats.galleryCount, label: "Galleries" },
-              { value: stats.userCount, label: "Photographers" },
-            ].map(({ value, label }) => (
-              <motion.div key={label} variants={itemVariants}>
-                <p className="font-display text-4xl sm:text-5xl font-light text-gold">
-                  <CountUp target={value} />
-                </p>
-                <p className="text-sm text-muted-foreground mt-1 uppercase tracking-widest">{label}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
+      {/* ── Stats ────────────────────────────── */}
+      <section className="border-y border-border">
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="max-w-7xl mx-auto px-6 lg:px-10 grid grid-cols-3 divide-x divide-border"
+        >
+          {[
+            { value: stats.photoCount, label: "Photos" },
+            { value: stats.galleryCount, label: "Galleries" },
+            { value: stats.userCount, label: "Photographers" },
+          ].map(({ value, label }) => (
+            <motion.div key={label} variants={fadeUp} className="py-10 lg:py-14 flex flex-col items-center gap-2 text-center">
+              <p className="font-display text-4xl sm:text-5xl lg:text-6xl font-light text-gold leading-none">
+                <CountUp target={value} />
+              </p>
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">{label}</p>
+            </motion.div>
+          ))}
+        </motion.div>
       </section>
 
-      {/* Featured galleries */}
+      {/* ── Featured Galleries ───────────────── */}
       {galleries.length > 0 && (
-        <section className="py-24 px-4 max-w-7xl mx-auto">
+        <section className="py-24 lg:py-32">
+          <div className="max-w-7xl mx-auto px-6 lg:px-10">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="flex items-end justify-between mb-12 lg:mb-16 pb-6 border-b border-border"
+            >
+              <div className="flex items-end gap-6">
+                <span className="text-xs font-mono text-muted-foreground mb-1">01</span>
+                <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-light italic leading-none">
+                  Selected Works
+                </h2>
+              </div>
+              <Link
+                href="/explore"
+                className="hidden sm:flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
+              >
+                View All
+                <ArrowUpRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
+            </motion.div>
+
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border"
+            >
+              {galleries.map((gallery) => (
+                <motion.div key={gallery.id} variants={fadeUp} className="bg-background">
+                  <GalleryCard gallery={gallery} />
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* ── CTA Strip ────────────────────────── */}
+      <section className="border-t border-border py-24 lg:py-32">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex items-end justify-between mb-12"
+            transition={{ duration: 0.7 }}
+            className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-10"
           >
-            <div>
-              <p className="text-gold text-xs uppercase tracking-widest mb-2">Selected Works</p>
-              <h2 className="font-display text-4xl sm:text-5xl font-light italic">
-                Featured Galleries
-              </h2>
+            <h2 className="font-display font-light italic leading-tight" style={{ fontSize: "clamp(2.5rem, 6vw, 5rem)" }}>
+              Start sharing<br />your work.
+            </h2>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/auth/register"
+                className="group inline-flex items-center gap-3 px-8 py-4 bg-gold text-background hover:opacity-90 transition-opacity"
+              >
+                <span className="text-xs font-mono uppercase tracking-widest">Create Account</span>
+                <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
+              <Link
+                href="/explore"
+                className="text-xs font-mono uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Or explore first →
+              </Link>
             </div>
-            <Link
-              href="/explore"
-              className="hidden sm:inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-gold transition-colors"
-            >
-              View all <ArrowRight className="h-4 w-4" />
-            </Link>
           </motion.div>
-
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            {galleries.map((gallery) => (
-              <motion.div key={gallery.id} variants={itemVariants}>
-                <GalleryCard gallery={gallery} />
-              </motion.div>
-            ))}
-          </motion.div>
-        </section>
-      )}
+        </div>
+      </section>
     </div>
   );
 }
