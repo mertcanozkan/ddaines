@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Globe, Lock, Images, Calendar } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MasonryGrid, type PhotoItem } from "@/components/gallery/MasonryGrid";
@@ -11,6 +12,7 @@ import { Lightbox } from "@/components/gallery/Lightbox";
 import { formatDate } from "@/lib/utils";
 
 interface Props {
+  galleryUserId: string;
   gallery: {
     id: string;
     title: string;
@@ -25,18 +27,69 @@ interface Props {
   photos: PhotoItem[];
 }
 
-export function GalleryViewClient({ gallery, photos }: Props) {
+export function GalleryViewClient({ galleryUserId, gallery, photos: initialPhotos }: Props) {
+  const { data: session } = useSession();
   const [selected, setSelected] = useState<PhotoItem | null>(null);
+  const [photos, setPhotos] = useState(initialPhotos);
+  const [coverImageUrl, setCoverImageUrl] = useState(gallery.coverImageUrl);
+
+  const isOwner = !!session?.user?.id && session.user.id === galleryUserId;
 
   const initials = gallery.user.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() ?? "?";
+
+  const handleDelete = useCallback(async (photo: PhotoItem) => {
+    const res = await fetch(`/api/photos/${photo.id}`, { method: "DELETE" });
+    if (!res.ok) return;
+
+    setPhotos((prev) => {
+      const remaining = prev.filter((p) => p.id !== photo.id);
+      const idx = prev.findIndex((p) => p.id === photo.id);
+      if (remaining.length === 0) {
+        setSelected(null);
+      } else {
+        setSelected(remaining[Math.min(idx, remaining.length - 1)]);
+      }
+      return remaining;
+    });
+  }, []);
+
+  const handleSetCover = useCallback(async (photo: PhotoItem) => {
+    const res = await fetch(`/api/galleries/${gallery.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: gallery.title,
+        description: gallery.description,
+        category: gallery.category,
+        visibility: gallery.visibility,
+        coverImageUrl: photo.imageUrl,
+      }),
+    });
+    if (res.ok) setCoverImageUrl(photo.imageUrl);
+  }, [gallery]);
+
+  const handleRename = useCallback(async (photo: PhotoItem, newTitle: string) => {
+    const res = await fetch(`/api/photos/${photo.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: newTitle }),
+    });
+    if (!res.ok) return;
+    const updated = await res.json();
+    setPhotos((prev) => prev.map((p) => (p.id === updated.id ? { ...p, title: updated.title } : p)));
+    setSelected((prev) => {
+      if (!prev) return null;
+      return prev.id === updated.id ? { ...prev, title: updated.title as string } : prev;
+    });
+  }, []);
 
   return (
     <div className="pt-16">
       {/* Hero */}
       <div className="relative h-64 sm:h-96 overflow-hidden">
-        {gallery.coverImageUrl ? (
+        {coverImageUrl ? (
           <Image
-            src={gallery.coverImageUrl}
+            src={coverImageUrl}
             alt={gallery.title}
             fill
             className="object-cover"
@@ -95,7 +148,17 @@ export function GalleryViewClient({ gallery, photos }: Props) {
       {/* Photos */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <MasonryGrid photos={photos} onPhotoClick={setSelected} />
-        <Lightbox photo={selected} photos={photos} onClose={() => setSelected(null)} onNavigate={setSelected} />
+        <Lightbox
+          photo={selected}
+          photos={photos}
+          onClose={() => setSelected(null)}
+          onNavigate={setSelected}
+          isOwner={isOwner}
+          coverImageUrl={coverImageUrl}
+          onDelete={handleDelete}
+          onRename={handleRename}
+          onSetCover={handleSetCover}
+        />
       </div>
     </div>
   );
