@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, CheckCircle2, Camera } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +25,7 @@ export function SettingsClient({ user }: Props) {
   const { update } = useSession();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl ?? undefined);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +79,16 @@ export function SettingsClient({ user }: Props) {
       router.refresh();
     }
     setAvatarUploading(false);
+  }
+
+  async function deleteAccount() {
+    setDeleting(true);
+    const res = await fetch("/api/user/account", { method: "DELETE" });
+    if (res.ok) {
+      await signOut({ callbackUrl: "/" });
+    } else {
+      setDeleting(false);
+    }
   }
 
   async function onSubmit(data: ProfileInput) {
@@ -210,7 +221,12 @@ export function SettingsClient({ user }: Props) {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <AlertDialogAction
+                onClick={deleteAccount}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+              >
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1.5" /> : null}
                 Delete My Account
               </AlertDialogAction>
             </AlertDialogFooter>
